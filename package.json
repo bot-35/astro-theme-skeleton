@@ -1,0 +1,77 @@
+{
+  "name": "@bot-35/astro-theme-skeleton",
+  "version": "0.0.1",
+  "description": "Squelette pro pour développer des thèmes Astro vendables (npm ou repo privé).",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "author": "Bot-35",
+  "keywords": ["astro", "theme", "starter", "template"],
+  "packageManager": "pnpm@10.14.0",
+  "engines": { "node": ">=20.10.0" },
+
+  "repository": { "type": "git", "url": "git+https://github.com/bot-35/astro-theme-skeleton.git" },
+  "homepage": "https://github.com/bot-35/astro-theme-skeleton#readme",
+  "bugs": { "url": "https://github.com/bot-35/astro-theme-skeleton/issues" },
+  "funding": [{ "type": "ko-fi", "url": "https://ko-fi.com/bot35" }],
+  "publishConfig": { "access": "public" },
+
+  "files": [
+    "src",
+    "dist",
+    "tailwind.preset.cjs",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./components/*": "./src/components/*",
+    "./styles/*": "./src/styles/*",
+    "./tailwind-preset": "./tailwind.preset.cjs"
+  },
+  "types": "./dist/index.d.ts",
+
+  "scripts": {
+    "dev": "astro dev",
+    "build": "tsup src/utils/index.ts --dts --format esm --out-dir dist && biome ci . && tsc -p tsconfig.build.json",
+    "preview": "astro preview",
+    "check": "astro check",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome ci .",
+    "lint:fix": "biome check --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "release": "changeset version && pnpm i --no-frozen-lockfile && git add -A && git commit -m \"chore: release\" && git tag v$(node -p \"require('./package.json').version\") && changeset publish"
+  },
+
+  "peerDependencies": {
+    "astro": ">=4.0.0",
+    "@astrojs/tailwind": ">=5.0.0",
+    "tailwindcss": ">=3.4.0",
+    "autoprefixer": ">=10.4.0",
+    "typescript": ">=5.0.0"
+  },
+
+  "devDependencies": {
+    "astro": "^4.14.0",
+    "@astrojs/tailwind": "^5.1.0",
+    "tailwindcss": "^3.4.10",
+    "autoprefixer": "^10.4.20",
+
+    "typescript": "^5.6.3",
+    "tsup": "^8.3.0",
+
+    "@types/node": "^22.7.5",
+    "biome": "^1.9.3",
+    "changesets": "^2.27.8",
+    "vitest": "^2.1.3",
+    "playwright": "^1.48.2"
+  }
+}
