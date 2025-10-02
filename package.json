@@ -6,15 +6,30 @@
   "private": false,
   "license": "MIT",
   "author": "Bot-35",
-  "keywords": ["astro", "theme", "starter", "template"],
+  "keywords": [
+    "astro",
+    "theme",
+    "starter",
+    "template"
+  ],
   "packageManager": "pnpm@10.14.0",
-  "engines": { "node": ">=20.10.0" },
-
-  "repository": { "type": "git", "url": "git+https://github.com/bot-35/astro-theme-skeleton.git" },
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bot-35/astro-theme-skeleton.git"
+  },
   "homepage": "https://github.com/bot-35/astro-theme-skeleton#readme",
-  "bugs": { "url": "https://github.com/bot-35/astro-theme-skeleton/issues" },
-  "funding": [{ "type": "ko-fi", "url": "https://ko-fi.com/bot35" }],
-
+  "bugs": {
+    "url": "https://github.com/bot-35/astro-theme-skeleton/issues"
+  },
+  "funding": [
+    {
+      "type": "ko-fi",
+      "url": "https://ko-fi.com/bot35"
+    }
+  ],
   "scripts": {
     "dev": "astro dev",
     "build": "biome ci . && tsc -p tsconfig.build.json",
@@ -26,16 +41,19 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "scaffold": "node scripts/scaffold.js",
+    "postinstall": "node scripts/scaffold.js --yes || exit 0"
   },
   "devDependencies": {
-    "astro": "^5.14.1",
-    "tailwindcss": "^4.1.14",
-    "@tailwindcss/vite": "^4.1.14",
-    "autoprefixer": "^10.4.21",
-    "typescript": "^5.9.3",
     "@biomejs/biome": "^2.2.4",
-    "vitest": "^3.2.4",
-    "playwright": "^1.55.1"
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/node": "^24.6.2",
+    "astro": "^5.14.1",
+    "autoprefixer": "^10.4.21",
+    "playwright": "^1.55.1",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }
