@@ -1,55 +1,73 @@
 // scripts/scaffold.js
-// Scaffolder Astro 5 + Tailwind v4 (zéro dépendance)
+// Scaffolder Astro 5 + Tailwind v4 (zéro dépendance, ESM)
 // Flags: --yes --force --name="Titre" --path=src/styles/tailwind.css --no-postcss
+
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import readline from "node:readline";
 
+// ---- utils console
 const C = {
-  ok: (m) => console.log("\x1b[32m%s\x1b[0m", m),
+  ok:   (m) => console.log("\x1b[32m%s\x1b[0m", m),
   info: (m) => console.log("\x1b[36m%s\x1b[0m", m),
   warn: (m) => console.log("\x1b[33m%s\x1b[0m", m),
-  err: (m) => console.log("\x1b[31m%s\x1b[0m", m),
+  err:  (m) => console.log("\x1b[31m%s\x1b[0m", m),
 };
 
-const args = new Map(process.argv.slice(2).map(a => {
-  const m = a.match(/^--([^=]+)(?:=(.*))?$/);
-  return m ? [m[1], m[2] ?? true] : [a, true];
-}));
+// ---- parse flags
+const args = new Map(
+  process.argv.slice(2).map((a) => {
+    const m = a.match(/^--([^=]+)(?:=(.*))?$/);
+    return m ? [m[1], m[2] ?? true] : [a, true];
+  }),
+);
 const NO_POSTCSS = args.has("no-postcss");
-const FORCE = args.has("force");
-const YES = args.has("yes");
-const CSS_PATH = args.get("path") || "src/styles/tailwind.css";
+const FORCE      = args.has("force");
+const YES        = args.has("yes");
+const CSS_PATH   = args.get("path") || "src/styles/tailwind.css";
 const THEME_NAME = args.get("name") || "Astro Theme Skeleton";
 
-const base = process.cwd();
-const ensureDir = (p) => { if (!existsSync(p)) { mkdirSync(p, { recursive: true }); C.ok(`+ dir  ${p}`); } };
+// URL CSS normalisée pour <link> (gère Windows \ et enlève rien)
+const cssHref = "/" + CSS_PATH.replace(/\\/g, "/");
+
+// ---- FS helpers
+const ensureDir = (p) => {
+  if (!existsSync(p)) {
+    mkdirSync(p, { recursive: true });
+    C.ok(`+ dir  ${p}`);
+  }
+};
 const write = (p, content) => {
-  if (existsSync(p) && !FORCE) { C.warn(`~ skip ${p} (exists)`); return false; }
+  if (existsSync(p) && !FORCE) {
+    C.warn(`~ skip ${p} (exists)`);
+    return false;
+  }
   ensureDir(dirname(p));
   writeFileSync(p, content, "utf8");
   C.ok(`${existsSync(p) && FORCE ? "±" : "+"} file ${p}`);
   return true;
 };
 
-// Petite confirmation si des fichiers existent déjà (sauf --yes)
-async function confirmIfExists(targets) {
+// confirmation si collisions (sauf --yes)
+async function confirmIfExists(paths) {
   if (YES) return true;
-  const collisions = targets.filter(p => existsSync(p));
+  const collisions = paths.filter((p) => existsSync(p));
   if (collisions.length === 0) return true;
 
   C.warn("Certains fichiers existent déjà :");
-  collisions.forEach(p => console.log("  -", p));
+  collisions.forEach((p) => console.log("  -", p));
+
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const q = (s) => new Promise(res => rl.question(s, res));
-  const ans = (await q("Les écraser ? (o/N) ")).trim().toLowerCase();
+  const ask = (q) => new Promise((res) => rl.question(q, res));
+  const ans = (await ask("Les écraser ? (o/N) ")).trim().toLowerCase();
   rl.close();
   return ans === "o" || ans === "oui" || ans === "y";
 }
 
-// ----- Templates -----
+// ---- templates à écrire
 const files = {
   [CSS_PATH]: `@import "tailwindcss";\n`,
+
   "src/components/Layout.astro": `---
 const { title = "${THEME_NAME}", description = "" } = Astro.props;
 ---
@@ -59,7 +77,7 @@ const { title = "${THEME_NAME}", description = "" } = Astro.props;
     <meta name="viewport" content="width=device-width" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="stylesheet" href="/${CSS_PATH.replace(/^src\\//, "src/")}" />
+    <link rel="stylesheet" href="${cssHref}" />
   </head>
   <body class="min-h-dvh bg-white text-zinc-900 antialiased">
     <header class="border-b">
@@ -82,6 +100,7 @@ const { title = "${THEME_NAME}", description = "" } = Astro.props;
   </body>
 </html>
 `,
+
   "src/pages/index.astro": `---
 import Layout from "../components/Layout.astro";
 ---
@@ -95,6 +114,7 @@ import Layout from "../components/Layout.astro";
   </section>
 </Layout>
 `,
+
   "src/pages/about.astro": `---
 import Layout from "../components/Layout.astro";
 ---
@@ -103,6 +123,7 @@ import Layout from "../components/Layout.astro";
   <p class="opacity-80">Ce thème est un squelette lean pour partir vite sur Astro 5 + Tailwind 4.</p>
 </Layout>
 `,
+
   "astro.config.mjs": `import { defineConfig } from "astro/config";
 import tailwind from "@tailwindcss/vite";
 
@@ -110,6 +131,19 @@ export default defineConfig({
   vite: { plugins: [tailwind()] }
 });
 `,
+  "tailwind.config.cjs": `/** @type {import('tailwindcss').Config} */
+// tailwind.config.cjs — v4 minimal
+module.exports = {
+  // pas de "content" en v4
+  plugins: [
+    // require('@tailwindcss/typography'),
+    // require('@tailwindcss/forms'),
+    // require('@tailwindcss/aspect-ratio'),
+  ],
+};
+  `,
+
+
   ".gitignore": `node_modules
 dist
 .cache
@@ -118,6 +152,7 @@ dist
 astro/dist
 playwright-report
 `,
+
   "tsconfig.build.json": `{
   "compilerOptions": {
     "target": "ES2022",
@@ -133,11 +168,12 @@ playwright-report
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "strict": true,
-    "types": ["astro/client"]
+    "types": ["astro/client", "node"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]
 }
 `,
+
   "README.md": `# ${THEME_NAME}
 
 Squelette lean pour développer un thème **Astro 5 + Tailwind CSS v4**.
@@ -161,25 +197,19 @@ pnpm dev
 `
 };
 
-const postcssFile = `module.exports = {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {}
-  }
-};
-`;
 
-// ----- Main -----
+
+// ---- main
 (async () => {
   try {
-    // Securité: vérifier qu'on est bien à la racine (présence du package.json)
-    const pkgPath = join(base, "package.json");
+    // sécurité: vérifier la racine de projet
+    const pkgPath = join(process.cwd(), "package.json");
     if (!existsSync(pkgPath)) {
       C.err("❌ package.json introuvable. Lance ce script à la racine du projet.");
       process.exit(1);
     }
 
-    // Demande de confirmation si collision
+    // confirmation si collisions
     const targets = Object.keys(files).concat(NO_POSTCSS ? [] : ["postcss.config.cjs"]);
     const ok = await confirmIfExists(targets);
     if (!ok) {
@@ -187,13 +217,16 @@ const postcssFile = `module.exports = {
       process.exit(0);
     }
 
-    // Création des fichiers
-    for (const [p, content] of Object.entries(files)) write(join(base, p), content);
-    if (!NO_POSTCSS) write(join(base, "postcss.config.cjs"), postcssFile);
+    // création
+    for (const [p, content] of Object.entries(files)) {
+      write(join(process.cwd(), p), content);
+    }
 
-    // Petit rappel si Tailwind n'est pas listé
+    // reminder deps Tailwind si absentes
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
-    const hasTW = (pkg.devDependencies && pkg.devDependencies.tailwindcss) || (pkg.dependencies && pkg.dependencies.tailwindcss);
+    const hasTW =
+      (pkg.devDependencies && pkg.devDependencies.tailwindcss) ||
+      (pkg.dependencies && pkg.dependencies.tailwindcss);
     if (!hasTW) {
       C.warn("⚠️ Tailwind n'est pas dans tes dépendances. Installe-le :");
       console.log("   pnpm add -D tailwindcss @tailwindcss/vite autoprefixer");
@@ -201,7 +234,7 @@ const postcssFile = `module.exports = {
 
     C.ok("✅ Scaffold terminé. Lance: pnpm dev");
   } catch (e) {
-    C.err(`Erreur: ${e.message}`);
+    C.err(`Erreur: ${e?.message || e}`);
     process.exit(1);
   }
 })();
