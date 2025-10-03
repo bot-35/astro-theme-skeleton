@@ -25,7 +25,80 @@ const NO_POSTCSS = args.has("no-postcss");
 const FORCE      = args.has("force");
 const YES        = args.has("yes");
 const CSS_PATH   = args.get("path") || "src/styles/tailwind.css";
-const THEME_NAME = args.get("name") || "Astro Theme Skeleton";
+const THEME_NAME_ = args.get("name") || "Astro Theme Skeleton";
+const CONFIG_PATH = args.get("config") || "theme.meta.json";
+
+
+function loadThemeMeta() {
+  const defaults = {
+    name: "Astro Theme Skeleton",
+    description: "",
+    colors: {
+      bg: "#ffffff",
+      fg: "#0a0a0a",
+      primary: "#0ea5e9",
+      "primary-foreground": "#ffffff",
+      muted: "#f5f5f7",
+      border: "#e5e7eb",
+    },
+  };
+
+  // 1) fichier theme.meta.json (ou --config=...)
+  if (existsSync(CONFIG_PATH)) {
+    try {
+      const raw = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+      return { ...defaults, ...raw, colors: { ...defaults.colors, ...(raw.colors || {}) } };
+    } catch (e) {
+      C.warn(`~ Config ${CONFIG_PATH} illisible, on garde les defaults (${e.message})`);
+      return defaults;
+    }
+  }
+
+  // 2) fallback package.json > theme
+  try {
+    const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
+    if (pkg.theme && typeof pkg.theme === "object") {
+      const raw = pkg.theme;
+      return { ...defaults, ...raw, colors: { ...defaults.colors, ...(raw.colors || {}) } };
+    }
+  } catch {}
+
+  return defaults;
+}
+
+// theme chargé
+const THEME = loadThemeMeta();
+const THEME_NAME = THEME_NAME_ || THEME.name;
+const DESCRIPTION = THEME.description;
+const LIGHT = THEME.colors || {};
+const DARK  = (THEME.colors && THEME.colors.dark) || {};
+
+function merge(a, b) { return { ...a, ...b }; }
+
+// valeurs garanties sur les deux thèmes
+const LIGHT_FULL = merge({
+  bg: "#ffffff",
+  fg: "#0a0a0a",
+  primary: "#0ea5e9",
+  "primary-foreground": "#ffffff",
+  muted: "#f5f5f7",
+  border: "#e5e7eb",
+}, LIGHT);
+
+const DARK_FULL = merge(LIGHT_FULL, DARK); // dark hérite du light par défaut
+
+
+// helper pour transformer en CSS vars
+function cssVars(vars) {
+  const flat = Object.entries(vars).map(([k, v]) => `  --${k}: ${v};`).join("\n");
+  return `:root {\n${flat}\n}\n`;
+}
+
+function cssVarsBlock(selector, vars) {
+  const flat = Object.entries(vars)
+    .map(([k, v]) => `  --color-${k}: ${v};`).join("\n");
+  return `${selector} {\n${flat}\n}\n`;
+}
 
 // URL CSS normalisée pour <link> (gère Windows \ et enlève rien)
 const cssHref = "/" + CSS_PATH.replace(/\\/g, "/");
@@ -66,7 +139,22 @@ async function confirmIfExists(paths) {
 
 // ---- templates à écrire
 const files = {
-  [CSS_PATH]: `@import "tailwindcss";\n`,
+[CSS_PATH]: `@import "tailwindcss";
+
+${cssVarsBlock(':root', LIGHT_FULL)}
+${cssVarsBlock(':root.dark, [data-theme="dark"]', DARK_FULL)}
+
+/* Variables de thème (générées) */
+${cssVars({
+  "color-bg": THEME.colors.bg,
+  "color-fg": THEME.colors.fg,
+  "color-primary": THEME.colors.primary,
+  "color-primary-foreground": THEME.colors["primary-foreground"],
+  "color-muted": THEME.colors.muted,
+  "color-border": THEME.colors.border,
+})}
+`,
+
 
   "src/components/Layout.astro": `---
 const { title = "${THEME_NAME}", description = "" } = Astro.props;
@@ -76,16 +164,19 @@ const { title = "${THEME_NAME}", description = "" } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>{title}</title>
-    <meta name="description" content={description} />
+    <meta name="description" content=${DESCRIPTION} />
     <link rel="stylesheet" href="${cssHref}" />
   </head>
-  <body class="min-h-dvh bg-white text-zinc-900 antialiased">
+  <body class="min-h-dvh bg-[color:var(--color-bg)] text-[color:var(--color-fg)] antialiased">
     <header class="border-b">
       <div class="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
-        <a href="/" class="font-semibold">${THEME_NAME}</a>
+        <a href="/" class="font-semibold ">${THEME_NAME}</a>
         <nav class="text-sm opacity-80 space-x-4">
           <a href="/" class="hover:underline">Accueil</a>
           <a href="/about" class="hover:underline">À propos</a>
+          <button id="theme-toggle" class="px-3 py-1 border rounded-md">
+            🌙 / ☀️
+          </button>
         </nav>
       </div>
     </header>
@@ -99,6 +190,21 @@ const { title = "${THEME_NAME}", description = "" } = Astro.props;
     </footer>
   </body>
 </html>
+
+<script>
+  const root = document.documentElement;
+  const KEY = 'theme';
+  const saved = localStorage.getItem(KEY);
+  if (saved === 'dark' || (!saved && matchMedia('(prefers-color-scheme: dark)').matches)) {
+    root.classList.add('dark');
+  }
+
+  document.getElementById('theme-toggle')?.addEventListener('click', () => {
+    const isDark = root.classList.toggle('dark');
+    localStorage.setItem(KEY, isDark ? 'dark' : 'light');
+  });
+</script>
+
 `,
 
   "src/pages/index.astro": `---
@@ -106,8 +212,8 @@ import Layout from "../components/Layout.astro";
 ---
 <Layout title="Bienvenue 🚀">
   <section class="space-y-3 text-center">
-    <h1 class="text-4xl font-bold tracking-tight">Hello Astro + Tailwind v4</h1>
-    <p class="opacity-80">Squelette prêt à designer ton thème.</p>
+    <h1 class="text-4xl font-bold tracking-tight">${THEME_NAME}</h1>
+    <p class="opacity-80">${DESCRIPTION}</p>
     <div class="mt-6">
       <a href="/about" class="inline-block px-4 py-2 rounded-md border hover:bg-zinc-50">À propos</a>
     </div>
@@ -135,6 +241,7 @@ export default defineConfig({
 // tailwind.config.cjs — v4 minimal
 module.exports = {
   // pas de "content" en v4
+  darkMode: 'class',
   plugins: [
     // require('@tailwindcss/typography'),
     // require('@tailwindcss/forms'),

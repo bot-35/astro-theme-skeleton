@@ -1,0 +1,20 @@
+{
+  "name": "Bot-35 Journal",
+  "description": "Thème Astro minimal et rapide.",
+  "colors": {
+    "bg": "#f9fafb",
+    "fg": "#0b0b0b",
+    "primary": "#c2812c",
+    "primary-foreground": "#f9fafb",
+    "muted": "#111827",
+    "border": "#27272a",
+    "dark": {
+      "bg": "#0b0b0b",
+      "fg": "#f9fafb",
+      "primary": "#c2812c",
+      "primary-foreground": "#0b0b0b",
+      "muted": "#111827",
+      "border": "#27272a"
+    }
+  }
+}
